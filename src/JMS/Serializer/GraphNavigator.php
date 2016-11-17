@@ -23,9 +23,12 @@ use JMS\Serializer\EventDispatcher\PreDeserializeEvent;
 use JMS\Serializer\EventDispatcher\PreSerializeEvent;
 use JMS\Serializer\Exception\RuntimeException;
 use JMS\Serializer\Construction\ObjectConstructorInterface;
+use JMS\Serializer\Exclusion\DisjunctExclusionStrategy;
+use JMS\Serializer\Exclusion\GroupsExclusionStrategy;
 use JMS\Serializer\Handler\HandlerRegistryInterface;
 use JMS\Serializer\EventDispatcher\EventDispatcherInterface;
 use JMS\Serializer\Metadata\ClassMetadata;
+use JMS\Serializer\Metadata\PropertyMetadata;
 use Metadata\MetadataFactoryInterface;
 use JMS\Serializer\Exception\InvalidArgumentException;
 use LogicException;
@@ -145,9 +148,9 @@ final class GraphNavigator
                 if ($context instanceof SerializationContext) {
                     //If data is a primitive type with custom handler, do not trigger visiting.
                     if (null !== $data && is_object($data)) {
-                        if ($context->isVisiting($data)) {
-                            return null;
-                        }
+//                        if ($context->isVisiting($data)) {
+//                            return null;
+//                        }
                         $context->startVisiting($data);
                     }
 
@@ -237,7 +240,16 @@ final class GraphNavigator
                     }
 
                     $context->pushPropertyMetadata($propertyMetadata);
+
+                    $originalGroups = $context->attributes->containsKey('groups') ? $context->attributes->get('groups')->get() : null;
+                    $this->applyRecursiveGroups($context);
+
                     $visitor->visitProperty($propertyMetadata, $data, $context);
+
+                    if (null !== $originalGroups) {
+                        $this->changeContextGroups($context, $originalGroups);
+                    }
+
                     $context->popPropertyMetadata();
                 }
 
@@ -283,6 +295,57 @@ final class GraphNavigator
         }
 
         return $this->metadataFactory->getMetadataForClass($metadata->discriminatorMap[$typeValue]);
+    }
+
+    /**
+     * @param Context $context
+     */
+    private function applyRecursiveGroups(Context $context)
+    {
+        if ($context->getMetadataStack() && $context->attributes->containsKey('groups')) {
+            $groups = array_fill_keys($context->attributes->get('groups')->get(), true);
+            $groupModifiers = array();
+            $path = '';
+            foreach ($context->getMetadataStack() as $metadata) {
+                if ($metadata instanceof PropertyMetadata && is_array($metadata->recursionGroups)) {
+                    $path = '.'.$metadata->name.$path;
+                    $groupModifiers[] = $metadata->recursionGroups;
+                }
+            }
+            foreach (array_reverse($groupModifiers) as $modifier) {
+                foreach ($modifier as $ifGroup => $withGroups) {
+                    if (isset($groups[$ifGroup])) {
+                        $groups = $withGroups;
+                        break;
+                    }
+                }
+            }
+            $this->changeContextGroups($context, array_keys($groups));
+        }
+    }
+
+    /**
+     * @param Context $context
+     * @param array   $groups
+     */
+    private function changeContextGroups(Context $context, array $groups)
+    {
+        if ($context->attributes->containsKey('groups')) {
+            $context->attributes->set('groups', $groups);
+        }
+        $exclusionStrategy = $context->getExclusionStrategy();
+        if ($exclusionStrategy instanceof DisjunctExclusionStrategy) {
+            foreach ($exclusionStrategy->getStrategies() as $delegate) {
+                if ($delegate instanceof GroupsExclusionStrategy) {
+                    $delegate->setGroups($groups);
+                }
+            }
+
+            return;
+        }
+        if ($exclusionStrategy instanceof GroupsExclusionStrategy) {
+            $exclusionStrategy->setGroups($groups);
+        }
     }
 
     private function leaveScope(Context $context, $data)
