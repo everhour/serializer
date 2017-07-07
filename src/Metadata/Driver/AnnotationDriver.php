@@ -57,8 +57,6 @@ use JMS\Serializer\Metadata\ClassMetadata;
 use JMS\Serializer\Metadata\ExpressionPropertyMetadata;
 use JMS\Serializer\Metadata\PropertyMetadata;
 use JMS\Serializer\Metadata\VirtualPropertyMetadata;
-use Metadata\Driver\DriverInterface;
-use JMS\Serializer\Annotation\MaxDepth;
 use JMS\Serializer\Annotation\RecursionGroups;
 use Metadata\MethodMetadata;
 
