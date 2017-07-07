@@ -58,6 +58,7 @@ use JMS\Serializer\Metadata\ExpressionPropertyMetadata;
 use JMS\Serializer\Metadata\PropertyMetadata;
 use JMS\Serializer\Metadata\VirtualPropertyMetadata;
 use JMS\Serializer\Annotation\RecursionGroups;
+use Metadata\Driver\DriverInterface;
 use Metadata\MethodMetadata;
 
 class AnnotationDriver implements DriverInterface
