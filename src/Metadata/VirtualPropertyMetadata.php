@@ -68,8 +68,8 @@ class VirtualPropertyMetadata extends PropertyMetadata
             $this->readOnly,
             $this->class,
             $this->name,
+            $this->recursionGroups,
             'excludeIf' => $this->excludeIf,
-            $this->recursionGroups
         ));
     }
 

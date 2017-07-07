@@ -50,7 +50,7 @@ class GroupsExclusionStrategy implements ExclusionStrategyInterface
      */
     public function setGroups($groups)
     {
-        $this->groups = array_fill_keys($groups, true);
+        $this->groups = $groups;
     }
 
     /**
